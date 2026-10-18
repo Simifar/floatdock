@@ -1,0 +1,20 @@
+version: 2
+updates:
+  - package-ecosystem: nuget
+    directory: "/"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      # The Windows App SDK parts are pinned as a set that works together; update them together.
+      windows-app-sdk:
+        patterns:
+          - "Microsoft.WindowsAppSDK*"
+    ignore:
+      # The Velopack package and the vpk tool in dotnet-tools.json must have the same version; update both by hand.
+      - dependency-name: "Velopack"
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5

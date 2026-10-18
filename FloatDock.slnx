@@ -1,0 +1,11 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/FloatDock.App/FloatDock.App.csproj" />
+    <Project Path="src/FloatDock.Core/FloatDock.Core.csproj" />
+    <Project Path="src/FloatDock.Guardian/FloatDock.Guardian.csproj" />
+    <Project Path="src/FloatDock.Windows/FloatDock.Windows.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/FloatDock.Core.Tests/FloatDock.Core.Tests.csproj" />
+  </Folder>
+</Solution>

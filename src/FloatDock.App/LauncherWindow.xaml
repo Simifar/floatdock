@@ -1,0 +1,67 @@
+<Window
+    x:Class="FloatDock.App.LauncherWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:FloatDock.App"
+    Title="FloatDock Apps">
+    <!-- Dark whatever the dock theme: light text over the blurred, darkened screen. -->
+    <Grid x:Name="Root" Opacity="0" RequestedTheme="Dark">
+        <Rectangle Fill="#40000000" />
+        <Grid x:Name="Stage" RenderTransformOrigin="0.5,0.5" Padding="32,72,32,120">
+            <Grid.RenderTransform>
+                <ScaleTransform x:Name="StageScale" />
+            </Grid.RenderTransform>
+            <Grid.Resources>
+                <DataTemplate x:Key="AppTemplate" x:DataType="local:LauncherItem">
+                    <StackPanel Width="112" Padding="0,8" Spacing="8" HorizontalAlignment="Center">
+                        <Grid Width="56" Height="56" HorizontalAlignment="Center">
+                            <FontIcon Glyph="&#xE8A5;" FontSize="30" Opacity="0.45" />
+                            <Image Source="{x:Bind Icon, Mode=OneWay}" Width="56" Height="56" Stretch="Uniform" />
+                            <Border Visibility="{x:Bind NewVisibility, Mode=OneWay}" HorizontalAlignment="Right" VerticalAlignment="Top"
+                                    Margin="0,-4,-14,0" Padding="6,1" CornerRadius="8"
+                                    Background="{ThemeResource AccentFillColorDefaultBrush}">
+                                <TextBlock Text="{x:Bind NewLabel}" FontSize="10" FontWeight="SemiBold"
+                                           Foreground="{ThemeResource TextOnAccentFillColorPrimaryBrush}" />
+                            </Border>
+                        </Grid>
+                        <TextBlock Text="{x:Bind Name}" FontSize="13" TextAlignment="Center" TextWrapping="Wrap"
+                                   MaxLines="2" TextTrimming="CharacterEllipsis" />
+                    </StackPanel>
+                </DataTemplate>
+                <ItemsPanelTemplate x:Key="AppPanel">
+                    <ItemsWrapGrid Orientation="Horizontal" ItemWidth="128" ItemHeight="124" HorizontalAlignment="Left" />
+                </ItemsPanelTemplate>
+            </Grid.Resources>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+
+            <Grid Grid.Row="0" Width="440" HorizontalAlignment="Center">
+                <TextBox x:Name="SearchBox" FontSize="18" CornerRadius="10" Padding="44,10,12,10"
+                         AutomationProperties.AutomationId="LauncherSearch" />
+                <FontIcon Glyph="&#xE721;" FontSize="16" Opacity="0.7" HorizontalAlignment="Left" VerticalAlignment="Center"
+                          Margin="16,0,0,0" IsHitTestVisible="False" />
+            </Grid>
+
+            <StackPanel x:Name="FrequentPanel" Grid.Row="1" HorizontalAlignment="Center" Margin="0,32,0,0" Visibility="Collapsed">
+                <TextBlock x:Name="FrequentHeader" FontSize="13" FontWeight="SemiBold" Opacity="0.75" Margin="8,0,0,4" HorizontalAlignment="Left" />
+                <GridView x:Name="FrequentGrid" ItemTemplate="{StaticResource AppTemplate}" ItemsPanel="{StaticResource AppPanel}"
+                          IsItemClickEnabled="True" SelectionMode="None" CanDragItems="True" IsSwipeEnabled="False"
+                          ScrollViewer.VerticalScrollMode="Disabled" ScrollViewer.VerticalScrollBarVisibility="Hidden"
+                          AutomationProperties.AutomationId="LauncherFrequent" />
+            </StackPanel>
+
+            <TextBlock x:Name="AllHeader" Grid.Row="2" FontSize="13" FontWeight="SemiBold" Opacity="0.75"
+                       Margin="0,16,0,4" HorizontalAlignment="Center" TextAlignment="Left" Visibility="Collapsed" />
+
+            <GridView x:Name="AllGrid" Grid.Row="3" HorizontalAlignment="Center" Margin="0,8,0,0" ItemTemplate="{StaticResource AppTemplate}"
+                      ItemsPanel="{StaticResource AppPanel}" IsItemClickEnabled="True" SelectionMode="Single" CanDragItems="True"
+                      IsSwipeEnabled="False" AutomationProperties.AutomationId="LauncherApps" />
+            <TextBlock x:Name="EmptyText" Grid.Row="3" FontSize="16" Opacity="0.75" Margin="0,48,0,0" HorizontalAlignment="Center"
+                       VerticalAlignment="Top" Visibility="Collapsed" />
+        </Grid>
+    </Grid>
+</Window>

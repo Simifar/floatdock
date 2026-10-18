@@ -1,0 +1,16 @@
+<Project>
+  <PropertyGroup>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <AnalysisLevel>latest</AnalysisLevel>
+    <LangVersion>latest</LangVersion>
+    <!-- The release number: scripts/build-velopack.ps1 and the release workflow read it from here. -->
+    <Version>0.4.0</Version>
+    <Product>FloatDock</Product>
+    <Authors>FloatDock contributors</Authors>
+    <Company>FloatDock contributors</Company>
+    <Copyright>Copyright (c) 2026 FloatDock contributors</Copyright>
+    <Description>A floating dock for the Windows desktop</Description>
+  </PropertyGroup>
+</Project>

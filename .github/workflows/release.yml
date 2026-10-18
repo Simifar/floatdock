@@ -1,0 +1,74 @@
+name: Release
+
+# Push a tag like v0.3.0 (it must equal <Version> in Directory.Build.props) to build, test and publish a GitHub release:
+#   FloatDockApp-win-Setup.exe        the installer (per user, no administrator rights)
+#   FloatDock-Setup.exe               the same file under a name that does not change, for the permanent "latest" link
+#   FloatDockApp-<version>-full.nupkg and releases.win.json   what the in-app updater reads
+#   FloatDockApp-win-Portable.zip     no installation
+# Run by hand (workflow_dispatch) it builds everything and leaves a draft release to look at.
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Version
+        id: version
+        shell: pwsh
+        run: |
+          $version = ./scripts/get-version.ps1
+          if ($env:GITHUB_REF_TYPE -eq 'tag' -and $env:GITHUB_REF_NAME -ne "v$version") {
+            throw "The tag $env:GITHUB_REF_NAME does not match <Version> $version in Directory.Build.props."
+          }
+          "version=$version" >> $env:GITHUB_OUTPUT
+
+      - name: Build and test
+        run: |
+          dotnet build FloatDock.slnx -c Release
+          dotnet test tests/FloatDock.Core.Tests/FloatDock.Core.Tests.csproj -c Release --no-build
+
+      # The updater needs the previous release's files in the folder to build delta packages; the first release has none.
+      - name: Previous release
+        shell: pwsh
+        continue-on-error: true
+        run: |
+          dotnet tool restore
+          dotnet vpk download github --repoUrl "https://github.com/${{ github.repository }}" --outputDir artifacts/velopack --token "${{ secrets.GITHUB_TOKEN }}"
+
+      - name: Pack
+        shell: pwsh
+        run: ./scripts/build-velopack.ps1 -OutputDir artifacts/velopack
+
+      - name: Release notes
+        shell: pwsh
+        run: |
+          Copy-Item artifacts/velopack/FloatDockApp-win-Setup.exe artifacts/velopack/FloatDock-Setup.exe
+          ./scripts/release-notes.ps1 -Version "${{ steps.version.outputs.version }}" -OutFile artifacts/release-notes.md -AssetDir artifacts/velopack
+
+      - name: Publish
+        shell: pwsh
+        run: |
+          $version = "${{ steps.version.outputs.version }}"
+          $publish = if ($env:GITHUB_REF_TYPE -eq 'tag') { @('--publish') } else { @() }
+          dotnet vpk upload github --outputDir artifacts/velopack --repoUrl "https://github.com/${{ github.repository }}" `
+            --token "${{ secrets.GITHUB_TOKEN }}" --releaseName "FloatDock $version" --tag "v$version" --merge @publish
+          gh release upload "v$version" artifacts/velopack/FloatDock-Setup.exe --clobber
+          gh release edit "v$version" --notes-file artifacts/release-notes.md
+          # Manifests for the winget community repository (see docs/DISTRIBUTION.md), built from the file that was just published.
+          ./scripts/new-winget-manifest.ps1 -Installer artifacts/velopack/FloatDock-Setup.exe -OutputDir artifacts/winget/manifest
+          Compress-Archive -Path artifacts/winget/manifest/* -DestinationPath "artifacts/winget/winget-manifests-$version.zip" -Force
+          gh release upload "v$version" "artifacts/winget/winget-manifests-$version.zip" --clobber
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

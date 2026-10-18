@@ -1,0 +1,11 @@
+<Window
+    x:Class="FloatDock.App.DockWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Title="FloatDock">
+    <Grid Background="Transparent">
+        <Border x:Name="DockSurface" CornerRadius="22" Padding="12,8" AllowDrop="True" Background="#DD20232A" VerticalAlignment="Bottom" HorizontalAlignment="Center">
+            <StackPanel x:Name="ItemsPanel" Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center" />
+        </Border>
+    </Grid>
+</Window>

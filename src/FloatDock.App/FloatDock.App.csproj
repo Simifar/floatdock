@@ -1,0 +1,56 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows10.0.26100.0</TargetFramework>
+    <TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion>
+    <RootNamespace>FloatDock.App</RootNamespace>
+    <UseWinUI>true</UseWinUI>
+    <WindowsPackageType>None</WindowsPackageType>
+    <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>Assets\FloatDock.ico</ApplicationIcon>
+    <!-- Program.cs is the entry point, so Velopack can answer its install and update command lines before any window exists. -->
+    <DefineConstants>$(DefineConstants);DISABLE_XAML_GENERATED_MAIN</DefineConstants>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- The Microsoft.WindowsAppSDK metapackage also brings the AI, ML (onnxruntime, DirectML), Widgets and Search components,
+         about 100 MB the dock never uses. These are the parts it depends on, at the metapackage's versions. -->
+    <PackageReference Include="Microsoft.WindowsAppSDK.Base" Version="2.0.4" />
+    <PackageReference Include="Microsoft.WindowsAppSDK.Foundation" Version="2.3.12" />
+    <PackageReference Include="Microsoft.WindowsAppSDK.InteractiveExperiences" Version="2.1.9" />
+    <PackageReference Include="Microsoft.WindowsAppSDK.WinUI" Version="2.3.9" />
+    <PackageReference Include="Microsoft.WindowsAppSDK.DWrite" Version="2.1.0" />
+    <PackageReference Include="Microsoft.WindowsAppSDK.Runtime" Version="2.5.1" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Velopack" Version="1.2.161" />
+    <Content Include="Assets\FloatDock.ico" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="..\..\LICENSE" Link="LICENSE" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="..\..\THIRD-PARTY-NOTICES.md" Link="THIRD-PARTY-NOTICES.md" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\FloatDock.Core\FloatDock.Core.csproj" />
+    <ProjectReference Include="..\FloatDock.Windows\FloatDock.Windows.csproj" />
+  </ItemGroup>
+  <!-- Taskbar hiding requires the recovery helper next to the app. Publish keeps its own self-contained Guardian step. -->
+  <Target Name="BuildAndCopyGuardian" AfterTargets="Build" Condition="'$(DesignTimeBuild)' != 'true' and '$(_IsPublishing)' != 'true'">
+    <MSBuild Projects="..\FloatDock.Guardian\FloatDock.Guardian.csproj" Targets="Build"
+             RemoveProperties="RuntimeIdentifier;SelfContained;WindowsAppSDKSelfContained">
+      <Output TaskParameter="TargetOutputs" ItemName="GuardianAssembly" />
+    </MSBuild>
+    <PropertyGroup>
+      <GuardianOutputDir>@(GuardianAssembly->'%(RootDir)%(Directory)')</GuardianOutputDir>
+    </PropertyGroup>
+    <ItemGroup>
+      <GuardianFile Include="$(GuardianOutputDir)*.*" />
+    </ItemGroup>
+    <Copy SourceFiles="@(GuardianFile)" DestinationFolder="$(OutDir)Guardian" SkipUnchangedFiles="true" />
+  </Target>
+  <Target Name="CopyWinUIResourcesToPublish" AfterTargets="Publish">
+    <ItemGroup>
+      <WinUIResource Include="$(TargetDir)*.xbf;$(TargetDir)*.pri" />
+    </ItemGroup>
+    <Copy SourceFiles="@(WinUIResource)" DestinationFolder="$(PublishDir)" SkipUnchangedFiles="true" />
+  </Target>
+</Project>

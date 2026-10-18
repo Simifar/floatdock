@@ -1,0 +1,7 @@
+# Security
+
+FloatDock runs as the current user and does not need elevation. It does not inject code into Explorer or other applications. Pin data is a typed launch target, never a shell command line. The optional taskbar mode starts Guardian before making a temporary visibility change. Files, folders and programs opened from the dock's folder grids go through the Shell (`ShellExecute`), so the Mark-of-the-Web warning and SmartScreen still apply; names shown from the file system have bidirectional control characters replaced. After an unhandled exception a minidump (threads, stacks and modules, no heap) is written to `%LocalAppData%FloatDockcrashes` and the last five are kept; it can still contain data from stacks, is never sent anywhere, and should be deleted before sharing a folder with it.
+
+If you discover a security issue, do not post exploit details in a public issue. Use **Report a vulnerability** on the repository's Security tab (GitHub private vulnerability reporting). You will get an answer within a few days; this is a small project with no bug bounty. Until a fix is released, disable optional taskbar replacement and use `--safe-mode` if you need recovery.
+
+Supported versions: the latest release. Updates are downloaded over https from the release feed you configure (by default this repository's releases) and their SHA-256 is checked against the feed's index; releases are not code-signed yet, so the trust is in GitHub and the repository.

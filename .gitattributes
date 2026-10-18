@@ -1,0 +1,11 @@
+# Text files are normalized to LF in the repository; Windows checkouts get CRLF (see .editorconfig).
+* text=auto
+
+*.png binary
+*.ico binary
+*.jpg binary
+*.zip binary
+*.nupkg binary
+
+# The pictures in docs/images are not part of the source for language statistics.
+docs/images/** linguist-documentation
