@@ -367,7 +367,7 @@ public sealed partial class DockWindow
             // Letting go of a pinned icon away from the dock removes it, as on macOS.
             if (dragged is { IsPinned: true } && args.DropResult == global::Windows.ApplicationModel.DataTransfer.DataPackageOperation.None &&
                 Host.IsCursorAwayFromDocks())
-                await Host.PersistAndRenderAsync(Settings with { Pins = PinList.Remove(Settings.Pins, dragged.Key) });
+                await Host.UnpinAsync(dragged.Key);
         };
         button.DragOver += (_, args) =>
         {

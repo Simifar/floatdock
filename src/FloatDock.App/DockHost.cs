@@ -29,7 +29,13 @@ internal sealed partial class DockHost
     private HashSet<string> _catalogIds = new(StringComparer.OrdinalIgnoreCase);
     private IReadOnlyList<WindowInfo> _windows = [];
     private IReadOnlyList<AppGroup> _groups = [];
+    // The user's choice, the only copy that is saved; _effective is what the docks run with (see DockSettings.Constrained).
     private DockSettings _settings = new();
+    private DockSettings _effective;
+    // Until the file has been read, a save would put defaults over it, and a Settings window would show and save defaults.
+    private bool _settingsLoaded;
+    private bool _settingsReady;
+    private bool _settingsRequested;
     private GuardianSession? _guardian;
     private SettingsWindow? _settingsWindow;
     private readonly DispatcherTimer _displayTimer = new() { Interval = TimeSpan.FromMilliseconds(400) };
@@ -48,6 +54,7 @@ internal sealed partial class DockHost
     {
         _safeMode = safeMode;
         _disableTaskbarReplacement = disableTaskbarReplacement || PackageIdentity.IsPackaged;
+        _effective = _settings.Constrained(_safeMode, PackageIdentity.IsPackaged);
         DispatcherQueue = DispatcherQueue.GetForCurrentThread();
         Icons = new IconService(ShellWorker);
         _launcher = new LaunchService(IsLaunchable);
@@ -110,7 +117,8 @@ internal sealed partial class DockHost
     public event Action? Closed;
 
     public DispatcherQueue DispatcherQueue { get; }
-    public DockSettings Settings => _settings;
+    /// <summary>What the docks run with. Never save it: in safe mode and in the Store package it differs from the user's choice.</summary>
+    public DockSettings Settings => _effective;
     public WindowTracker Tracker { get; } = new();
     public WindowCommands Commands { get; } = new();
     public StaWorker ShellWorker { get; } = new("FloatDock shell");
@@ -162,18 +170,20 @@ internal sealed partial class DockHost
     {
         try
         {
-            _settings = await _store.LoadAsync();
+            var loaded = await _store.LoadAsync();
+            if (Environment.ProcessPath is string executable)
+                loaded = loaded with { StartWithWindows = await _startupManager.IsEnabledAsync(executable) };
+            SetSettings(loaded);
+            _settingsLoaded = true;
+            OnSettingsReady();
             _launchCounts.Load();
             _firstSeen.Load();
-            if (Environment.ProcessPath is string executable)
-                _settings = _settings with { StartWithWindows = await _startupManager.IsEnabledAsync(executable) };
-            _settings = Constrain(_settings);
             Render();
             Tracker.Start();
             _anchor!.Messages.RegisterShellHook();
             ApplyLauncherHotKey();
             _catalog.Start();
-            if (_settings.CheckForUpdatesAtStartup) _ = DownloadUpdateAtStartupAsync();
+            if (_effective.CheckForUpdatesAtStartup) _ = DownloadUpdateAtStartupAsync();
             await ApplyTaskbarReplacementAsync();
             PositionDocks();
             ScheduleHides();
@@ -187,22 +197,38 @@ internal sealed partial class DockHost
         catch (Exception ex)
         {
             LocalLog.Write("Error", "dock-initialization", ex);
-            _settings = new DockSettings();
+            // Keep what was loaded: defaults here would be saved over the user's file by the next change. When the file could not
+            // be read at all, the defaults are used but never saved (see SaveAsync).
+            OnSettingsReady();
             Render();
             Tracker.Start();
         }
     }
 
-    /// <summary>
-    /// Safe mode keeps to one plain dock on the primary display. The Microsoft Store package never replaces the Windows taskbar
-    /// (the Store's policy 10.2.8 allows only supported methods for changing the user's Windows experience) and is updated by the
-    /// Store, so it neither hides the taskbar nor checks for updates itself.
-    /// </summary>
-    private DockSettings Constrain(DockSettings settings)
+    private void SetSettings(DockSettings settings)
     {
-        if (_safeMode) settings = settings with { Mode = DockMode.Floating, Magnification = 1, Displays = DockDisplays.Primary };
-        if (PackageIdentity.IsPackaged) settings = settings with { ReplaceTaskbar = false, CheckForUpdatesAtStartup = false };
-        return settings;
+        _settings = settings;
+        _effective = settings.Constrained(_safeMode, PackageIdentity.IsPackaged);
+    }
+
+    /// <summary>The settings are known now; a Settings window asked for while they loaded opens with them.</summary>
+    private void OnSettingsReady()
+    {
+        _settingsReady = true;
+        if (!_settingsRequested) return;
+        _settingsRequested = false;
+        OpenSettings();
+    }
+
+    /// <summary>Saves the user's choice, unless the file was never read: then saving would replace it with defaults.</summary>
+    private async Task SaveAsync(DockSettings settings)
+    {
+        if (!_settingsLoaded)
+        {
+            LocalLog.Write("Warning", "settings-save-skipped");
+            return;
+        }
+        await _store.SaveAsync(settings);
     }
 
     /// <summary>Builds the groups once and lets every dock draw them.</summary>
@@ -267,9 +293,11 @@ internal sealed partial class DockHost
 
     public async Task TogglePinAsync(AppGroup group)
     {
-        if (group.IsPinned) await PersistAndRenderAsync(_settings with { Pins = PinList.Remove(_settings.Pins, group.Key) });
+        if (group.IsPinned) await UnpinAsync(group.Key);
         else await PinAtAsync(group, _settings.Pins.Count);
     }
+
+    public Task UnpinAsync(string key) => PersistAndRenderAsync(_settings with { Pins = PinList.Remove(_settings.Pins, key) });
 
     /// <summary>Pins a running app, or moves an already pinned one, to <paramref name="index"/>.</summary>
     public async Task PinAtAsync(AppGroup group, int index)
@@ -311,8 +339,8 @@ internal sealed partial class DockHost
     {
         try
         {
-            await _store.SaveAsync(next);
-            _settings = next;
+            await SaveAsync(next);
+            SetSettings(next);
             Render();
             _settingsWindow?.ShowSettings(_settings);
         }
@@ -360,7 +388,7 @@ internal sealed partial class DockHost
         var extras = _views.Where(view => !view.IsAnchor).Select(view => view.DisplayId!.Value).ToList();
         // A failed listing says nothing about the displays: keep the docks as they are.
         if (!ScreenDisplays.TryAll(out var displays)) return;
-        var change = DockDisplayPlan.Reconcile(extras, displays, _settings.Displays);
+        var change = DockDisplayPlan.Reconcile(extras, displays, _effective.Displays);
         foreach (var id in change.Remove) _views.FirstOrDefault(view => view.DisplayId == id)?.Close();
         foreach (var id in change.Add)
         {
@@ -473,22 +501,29 @@ internal sealed partial class DockHost
 
     public void OpenSettings()
     {
+        // Opened before the file is read (--settings, or a second launch while this one starts), the window would hold the
+        // defaults and save them over the user's settings at the first change. It opens as soon as they are loaded.
+        if (!_settingsReady)
+        {
+            _settingsRequested = true;
+            return;
+        }
         if (_settingsWindow is null)
         {
             _settingsWindow = new SettingsWindow(_settings, _taskbarStatus, _firstRunPromptShown && !_settings.FirstRunCompleted, async value =>
             {
                 if (_closing) return _settings;
                 var previous = _settings;
-                _settings = Constrain(value.Validate());
+                SetSettings(value.Validate());
                 var hotKeyChanged = previous.LauncherHotKey != _settings.LauncherHotKey;
                 if (Environment.ProcessPath is string executable &&
                     !await _startupManager.SetEnabledAsync(executable, _settings.StartWithWindows))
-                    _settings = _settings with { StartWithWindows = await _startupManager.IsEnabledAsync(executable) };
-                try { await _store.SaveAsync(_settings); }
+                    SetSettings(_settings with { StartWithWindows = await _startupManager.IsEnabledAsync(executable) });
+                try { await SaveAsync(_settings); }
                 catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
                 {
                     LocalLog.Write("Error", "settings-save", ex);
-                    _settings = previous;
+                    SetSettings(previous);
                 }
                 await ApplyTaskbarReplacementAsync();
                 if (hotKeyChanged) ApplyLauncherHotKey();
@@ -538,16 +573,16 @@ internal sealed partial class DockHost
         try
         {
             if (_closing || _sessionEnding) return;
-            if (!_settings.ReplaceTaskbar || _disableTaskbarReplacement)
+            if (!_effective.ReplaceTaskbar || _disableTaskbarReplacement)
             {
                 StopTaskbarReplacement();
-                SetTaskbarStatus(_settings.ReplaceTaskbar ? "replaceSafeMode" : null);
+                SetTaskbarStatus(_effective.ReplaceTaskbar ? "replaceSafeMode" : null);
                 return;
             }
             if (_guardian is null)
             {
                 var guardian = await GuardianSession.TryStartAsync();
-                if (_closing || !_settings.ReplaceTaskbar)
+                if (_closing || !_effective.ReplaceTaskbar)
                 {
                     guardian?.Dispose();
                     return;
@@ -609,7 +644,7 @@ internal sealed partial class DockHost
     {
         // Explorer restarted: re-hide its new taskbar, or retry a hide that found no taskbar.
         if (Taskbar.IsHidden) Taskbar.EnsureHidden();
-        else if (_settings.ReplaceTaskbar) _ = ApplyTaskbarReplacementAsync();
+        else if (_effective.ReplaceTaskbar) _ = ApplyTaskbarReplacementAsync();
         PositionDocks(reserveAgain: true);
         Tracker.Refresh();
     }

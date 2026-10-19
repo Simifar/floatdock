@@ -19,7 +19,7 @@ jobs:
   release:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: '10.0.x'
@@ -46,6 +46,9 @@ jobs:
         run: |
           dotnet tool restore
           dotnet vpk download github --repoUrl "https://github.com/${{ github.repository }}" --outputDir artifacts/velopack --token "${{ secrets.GITHUB_TOKEN }}"
+          # A draft made by an earlier manual run of this workflow (the dry run) holds this very version, and vpk pack refuses a version
+          # that is already in the feed. Forget that version here; the Publish step merges the new files into the release.
+          ./scripts/forget-version.ps1 -Directory artifacts/velopack -Version (./scripts/get-version.ps1)
 
       - name: Pack
         shell: pwsh
