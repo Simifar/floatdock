@@ -137,6 +137,20 @@ Not tested: the release workflow itself (it runs on GitHub; `vpk download github
 
 Not done: the 8-hour soak (the one above is 31 minutes), the installer's code signing (no certificate) and automatic update, a signed-binary SmartScreen check, and measurements of idle CPU over hours.
 
+## Settings persistence fixes on 2026-10-19
+
+Found by the audit and reproduced before the fix on the Debug build: a cold start with `--settings` opened the window with the defaults (its title was in the system language although the file said English), and one switch saved IconSize 52, no pins and the default switches over a file with IconSize 68 and one pin; in safe mode one switch saved Magnification 1, Mode 0 and Displays 0 over 1.8, 2 and 1. The log showed six `dock-initialization` errors on 2026-10-18 (the `DisplayArea.FindAll` defect), each of which had put the defaults in memory, so the next change would have saved them.
+
+After the fix: `dotnet test` 151 tests pass (new: the safe-mode and Store limits leave the saved settings alone and a file saved from a constrained run keeps the user's values). `tests/manual/settings-persistence-check.ps1` (new) passes both paths: the window opened by `--settings` has the loaded language, and after a switch the pin, IconSize 68, the language and the other switches are still in the file; in safe mode the saved file keeps Magnification 1.8, Mode 2 and Displays 1. `guardian-smoke`, `appbar-smoke`, `exit-smoke`, `autohide-smoke`, `launcher-check`, `displays-check`, `pins-check` and `dock-features-check` pass. Checked by reading only: an error during start-up after the settings are loaded keeps them (no way to cause one from outside), a file that cannot be read at all is never overwritten, and a second launch during start-up waits for the settings like `--settings` does.
+
+## Clock timer fix on 2026-10-19
+
+Cause: the dock draws again on every window snapshot, and that called `Start()` on the running 10-second timer of the clock and the Recycle Bin, which restarts it. `tests/manual/clock-check.ps1` (new: a window renames itself every second, the clock is read through UI Automation 25 s into the next minute) failed on the build without the fix (the clock showed 12:08 at 12:09) and passes with it. The auto-hide polling timer had the same call; with a title change every 50 ms auto-hide still worked before the fix (snapshots come at most every 80 ms plus the scan), and it now starts only when stopped too. `guardian-smoke`, `appbar-smoke`, `exit-smoke`, `autohide-smoke`, `dock-features-check`, `item-motion-check` and `fullscreen-check` pass. Not checked: the Recycle Bin icon change itself (it needs the bin to be emptied or filled while the check runs).
+
+## Update errors on 2026-10-19
+
+Velopack 1.2.161 throws `ChecksumFailedException`, `AcquireLockFailedException` and `NotInstalledException`, all derived from `Exception` itself, and `UpdateService` caught only a list of framework exceptions. `tests/manual/update-damaged-check.ps1` (new: installs an older build, points it at a copy of a folder feed whose newer packages are damaged, presses Check for updates and Install through UI Automation) on a build without the fix (0.4.90 to 0.4.91, packed from that code): the dock ended, the log has `Fatal unhandled-ui ChecksumFailedException`. With the fix (0.4.92 to 0.4.93): Settings shows "The update could not be checked or downloaded", the dock keeps running, 0.4.92 stays installed, the log has `Warning update-download ChecksumFailedException`. `update-check.ps1` passes both parts again with the good feed; it had to open the Updates page first, which it did not do since Settings got its page list. Not checked: `AcquireLockFailedException` (two downloads at once), an https feed.
+
 ## Not yet validated
 
 An actual Explorer restart, sleep/resume, a real second monitor and per-monitor DPI, exclusive fullscreen games, keyboard-only use, touch, high contrast, long-running memory/handle soak, and MSIX installation. These remain release gates, not inferred passes.
