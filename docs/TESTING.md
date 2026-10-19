@@ -143,6 +143,10 @@ Found by the audit and reproduced before the fix on the Debug build: a cold star
 
 After the fix: `dotnet test` 151 tests pass (new: the safe-mode and Store limits leave the saved settings alone and a file saved from a constrained run keeps the user's values). `tests/manual/settings-persistence-check.ps1` (new) passes both paths: the window opened by `--settings` has the loaded language, and after a switch the pin, IconSize 68, the language and the other switches are still in the file; in safe mode the saved file keeps Magnification 1.8, Mode 2 and Displays 1. `guardian-smoke`, `appbar-smoke`, `exit-smoke`, `autohide-smoke`, `launcher-check`, `displays-check`, `pins-check` and `dock-features-check` pass. Checked by reading only: an error during start-up after the settings are loaded keeps them (no way to cause one from outside), a file that cannot be read at all is never overwritten, and a second launch during start-up waits for the settings like `--settings` does.
 
+## Clock timer fix on 2026-10-19
+
+Cause: the dock draws again on every window snapshot, and that called `Start()` on the running 10-second timer of the clock and the Recycle Bin, which restarts it. `tests/manual/clock-check.ps1` (new: a window renames itself every second, the clock is read through UI Automation 25 s into the next minute) failed on the build without the fix (the clock showed 12:08 at 12:09) and passes with it. The auto-hide polling timer had the same call; with a title change every 50 ms auto-hide still worked before the fix (snapshots come at most every 80 ms plus the scan), and it now starts only when stopped too. `guardian-smoke`, `appbar-smoke`, `exit-smoke`, `autohide-smoke`, `dock-features-check`, `item-motion-check` and `fullscreen-check` pass. Not checked: the Recycle Bin icon change itself (it needs the bin to be emptied or filled while the check runs).
+
 ## Not yet validated
 
 An actual Explorer restart, sleep/resume, a real second monitor and per-monitor DPI, exclusive fullscreen games, keyboard-only use, touch, high contrast, long-running memory/handle soak, and MSIX installation. These remain release gates, not inferred passes.
