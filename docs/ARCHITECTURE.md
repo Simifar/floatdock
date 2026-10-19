@@ -15,7 +15,7 @@ FloatDock is a per-user WinUI 3 process. It does not replace Explorer, inject in
 
 `EnumWindows` seeds the snapshot. `SetWinEventHook` reports changes to a bounded queue. The tracker re-queries HWND properties, filters tool/owned/cloaked/invisible windows, and publishes snapshots. Application grouping currently uses the executable path, with a PID fallback when the path is inaccessible. Packaged application identity is not resolved yet. Multiple windows from one executable form one group. The UI receives changes through its dispatcher.
 
-Pinned items store a typed launch target (`Executable` or `Shortcut`) and stable order. The model reserves `AppUserModelId` for future packaged-app support; that launch kind is currently unavailable. Paths are never interpreted as shell command lines. Settings use versioned JSON under `%LocalAppData%\FloatDock`, a temporary file with flush, and atomic replacement. Corrupt input is backed up and defaults are loaded.
+Pinned items store a typed launch target (`Executable` or `Shortcut`) and stable order. The model reserves `AppUserModelId` for future packaged-app support; that launch kind is currently unavailable. Paths are never interpreted as shell command lines. Settings use versioned JSON under `%LocalAppData%\FloatDock`, a temporary file with flush, and atomic replacement. Corrupt input is backed up and defaults are loaded. Only the user's choice is saved: safe mode and the Store package limit what the dock does (`DockSettings.Constrained`), not what is written. Nothing is saved, and Settings does not open, until the file has been read.
 
 ## Displays and DPI
 

@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Settings opened while the dock is still starting (`--settings`, or a second launch at that moment) no longer show the defaults and save them over your settings at the first change, which lost every pin. The window now opens once the settings are loaded.
+- An error while the dock starts no longer replaces the loaded settings with the defaults, which the next pin or change then saved over the file. If the file cannot be read at all, the dock runs with the defaults and does not save them.
+- Safe mode (`--safe-mode`, or after three quick failed starts) no longer saves its limits (no magnification, floating, primary display only) as your settings when you change something; the next normal start has your own choice again. Settings shows that choice in safe mode too.
+- The dock's clock no longer stops while another window keeps changing its title (a browser, a player, a terminal): every change restarted its 10-second timer. The Recycle Bin's full or empty icon had the same problem.
+- A damaged update download (its SHA-256 does not match the feed) no longer ends the dock when you press Install in Settings; Settings says the update could not be downloaded. The same holds for the updater's other errors, such as two downloads at once.
+
 ## 0.4.0 - 2026-10-18
 
 - The dock has no outline or visible window rectangle: only the shelf is drawn, and clicks outside it reach the windows underneath.

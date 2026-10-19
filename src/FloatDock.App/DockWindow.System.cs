@@ -43,7 +43,8 @@ public sealed partial class DockWindow
         if (system.Count == 0) _systemTimer.Stop();
         else
         {
-            _systemTimer.Start();
+            // Render runs on every window change, and Start restarts a running timer: the clock would stop while titles change.
+            if (!_systemTimer.IsEnabled) _systemTimer.Start();
             if (_views.Count != before) RefreshSystemItems();
         }
     }

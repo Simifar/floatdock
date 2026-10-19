@@ -39,8 +39,9 @@ internal sealed class UpdateService
                 ? new UpdateCheck(UpdateOutcome.UpToDate)
                 : new UpdateCheck(UpdateOutcome.Available, _pending.TargetFullRelease.Version.ToString());
         }
-        catch (Exception ex) when (ex is HttpRequestException or IOException or UnauthorizedAccessException or InvalidOperationException
-            or ArgumentException or System.Text.Json.JsonException or TaskCanceledException)
+        // Every failure is a "could not": Velopack also throws its own exceptions (ChecksumFailedException, AcquireLockFailedException,
+        // NotInstalledException derive from Exception itself), and an uncaught one here would end the process from a Settings button.
+        catch (Exception ex)
         {
             LocalLog.Write("Warning", "update-check", ex);
             return new UpdateCheck(UpdateOutcome.Failed);
@@ -59,8 +60,8 @@ internal sealed class UpdateService
             LocalLog.Write("Info", "update-downloaded");
             return true;
         }
-        catch (Exception ex) when (ex is HttpRequestException or IOException or UnauthorizedAccessException or InvalidOperationException
-            or ArgumentException or System.Text.Json.JsonException or TaskCanceledException)
+        // A package that fails its SHA-256 check throws ChecksumFailedException; see CheckAsync.
+        catch (Exception ex)
         {
             LocalLog.Write("Warning", "update-download", ex);
             return false;
@@ -78,7 +79,7 @@ internal sealed class UpdateService
             LocalLog.Write("Info", restart ? "update-apply-restart" : "update-apply-on-exit");
             return true;
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException or System.ComponentModel.Win32Exception)
+        catch (Exception ex)
         {
             LocalLog.Write("Warning", "update-apply", ex);
             return false;

@@ -116,14 +116,13 @@ internal sealed partial class DockHost : ILauncherHost
     public string AppName(string id) => _catalog.Apps.FirstOrDefault(app => app.Id.Equals(id, StringComparison.OrdinalIgnoreCase))?.Name ?? id;
 
     // The dock window's height (icons at full magnification plus the shelf) and its bottom margin, plus a gap.
-    double ILauncherHost.BottomInset => _settings.IconSize * _settings.Magnification + 35 + 12 + 24;
+    double ILauncherHost.BottomInset => _effective.IconSize * _effective.Magnification + 35 + 12 + 24;
 
     bool ILauncherHost.IsPinned(AppEntry app) => PinList.IndexOf(_settings.Pins, app.Key) >= 0;
 
     Task ILauncherHost.PinAsync(AppEntry app) => PinCatalogAppAsync(app, _settings.Pins.Count);
 
-    Task ILauncherHost.UnpinAsync(AppEntry app) =>
-        PersistAndRenderAsync(_settings with { Pins = PinList.Remove(_settings.Pins, app.Key) });
+    Task ILauncherHost.UnpinAsync(AppEntry app) => UnpinAsync(app.Key);
 
     void ILauncherHost.Launch(AppEntry app, bool asAdministrator)
     {

@@ -50,6 +50,9 @@ try {
   $activate = [Threading.EventWaitHandle]::OpenExisting('Local\FloatDock.Activate'); [void]$activate.Set(); $activate.Dispose()
   $win = $null
   Check 'Settings opens' (Wait-Until { $script:win = Settings-Window $dock; $null -ne $script:win } 10000)
+  # The update button is on the Updates page of the page list.
+  $page = $win.FindFirst([Windows.Automation.TreeScope]::Descendants, (New-Object Windows.Automation.PropertyCondition($A::NameProperty, 'Обновления')))
+  if ($page) { $page.GetCurrentPattern([Windows.Automation.SelectionItemPattern]::Pattern).Select(); Start-Sleep -Milliseconds 800; $win = Settings-Window $dock }
   $check = Button $win 'Проверить обновления'
   Check 'Settings has the update button' ($null -ne $check)
   Invoke $check

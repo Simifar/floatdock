@@ -60,6 +60,20 @@ public sealed record DockSettings
     /// <summary>The project's own releases.</summary>
     public const string DefaultUpdateFeed = "https://github.com/Simifar/floatdock";
 
+    /// <summary>
+    /// What the dock runs with. Safe mode keeps to one plain dock on the primary display. The Microsoft Store package never
+    /// replaces the Windows taskbar (the Store's policy 10.2.8 allows only supported methods for changing the user's Windows
+    /// experience) and is updated by the Store, so it neither hides the taskbar nor checks for updates itself. For use only:
+    /// the saved settings stay the user's choice, so leaving safe mode brings that choice back.
+    /// </summary>
+    public DockSettings Constrained(bool safeMode, bool packaged)
+    {
+        var settings = this;
+        if (safeMode) settings = settings with { Mode = DockMode.Floating, Magnification = 1, Displays = DockDisplays.Primary };
+        if (packaged) settings = settings with { ReplaceTaskbar = false, CheckForUpdatesAtStartup = false };
+        return settings;
+    }
+
     public DockSettings Validate() => this with
     {
         LauncherHotKey = string.IsNullOrWhiteSpace(LauncherHotKey) ? string.Empty
