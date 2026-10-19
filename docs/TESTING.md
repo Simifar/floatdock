@@ -137,6 +137,12 @@ Not tested: the release workflow itself (it runs on GitHub; `vpk download github
 
 Not done: the 8-hour soak (the one above is 31 minutes), the installer's code signing (no certificate) and automatic update, a signed-binary SmartScreen check, and measurements of idle CPU over hours.
 
+## Settings persistence fixes on 2026-10-19
+
+Found by the audit and reproduced before the fix on the Debug build: a cold start with `--settings` opened the window with the defaults (its title was in the system language although the file said English), and one switch saved IconSize 52, no pins and the default switches over a file with IconSize 68 and one pin; in safe mode one switch saved Magnification 1, Mode 0 and Displays 0 over 1.8, 2 and 1. The log showed six `dock-initialization` errors on 2026-10-18 (the `DisplayArea.FindAll` defect), each of which had put the defaults in memory, so the next change would have saved them.
+
+After the fix: `dotnet test` 151 tests pass (new: the safe-mode and Store limits leave the saved settings alone and a file saved from a constrained run keeps the user's values). `tests/manual/settings-persistence-check.ps1` (new) passes both paths: the window opened by `--settings` has the loaded language, and after a switch the pin, IconSize 68, the language and the other switches are still in the file; in safe mode the saved file keeps Magnification 1.8, Mode 2 and Displays 1. `guardian-smoke`, `appbar-smoke`, `exit-smoke`, `autohide-smoke`, `launcher-check`, `displays-check`, `pins-check` and `dock-features-check` pass. Checked by reading only: an error during start-up after the settings are loaded keeps them (no way to cause one from outside), a file that cannot be read at all is never overwritten, and a second launch during start-up waits for the settings like `--settings` does.
+
 ## Not yet validated
 
 An actual Explorer restart, sleep/resume, a real second monitor and per-monitor DPI, exclusive fullscreen games, keyboard-only use, touch, high contrast, long-running memory/handle soak, and MSIX installation. These remain release gates, not inferred passes.

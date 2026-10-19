@@ -151,6 +151,27 @@ public sealed class CoreTests
     }
 
     [Fact]
+    public async Task SafeModeAndStoreLimitsApplyToUseNotToTheSavedSettings()
+    {
+        var chosen = new DockSettings { Mode = DockMode.AutoHide, Magnification = 1.8, Displays = DockDisplays.All, ReplaceTaskbar = true, CheckForUpdatesAtStartup = true };
+        var safe = chosen.Constrained(safeMode: true, packaged: false);
+        Assert.Equal((DockMode.Floating, 1.0, DockDisplays.Primary, true), (safe.Mode, safe.Magnification, safe.Displays, safe.ReplaceTaskbar));
+        var store = chosen.Constrained(safeMode: false, packaged: true);
+        Assert.Equal((false, false, DockMode.AutoHide), (store.ReplaceTaskbar, store.CheckForUpdatesAtStartup, store.Mode));
+        Assert.Same(chosen, chosen.Constrained(safeMode: false, packaged: false));
+
+        // What is saved is the choice, so the next normal start gets it back.
+        var directory = Path.Combine(Path.GetTempPath(), "FloatDockTest-" + Guid.NewGuid().ToString("N"));
+        try
+        {
+            await new SettingsStore(directory).SaveAsync(chosen with { ReduceMotion = true });
+            var loaded = await new SettingsStore(directory).LoadAsync();
+            Assert.Equal((DockMode.AutoHide, 1.8, DockDisplays.All), (loaded.Mode, loaded.Magnification, loaded.Displays));
+        }
+        finally { if (Directory.Exists(directory)) Directory.Delete(directory, true); }
+    }
+
+    [Fact]
     public void ThreeRapidStartupAttemptsRequireSafeMode()
     {
         var directory = Path.Combine(Path.GetTempPath(), "FloatDockTest-" + Guid.NewGuid().ToString("N"));
