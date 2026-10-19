@@ -151,7 +151,8 @@ public sealed partial class DockWindow : Window
             _renderedLanguage = Settings.Language;
         }
         ReconcileItems(groups, light);
-        if (Settings.Mode == DockMode.AutoHide) _cursorTimer.Start();
+        // Started only when stopped: Start restarts a running timer, and this runs on every window change.
+        if (Settings.Mode == DockMode.AutoHide) { if (!_cursorTimer.IsEnabled) _cursorTimer.Start(); }
         else
         {
             _cursorTimer.Stop();
