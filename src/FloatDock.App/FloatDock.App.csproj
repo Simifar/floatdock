@@ -16,12 +16,12 @@
   <ItemGroup>
     <!-- The Microsoft.WindowsAppSDK metapackage also brings the AI, ML (onnxruntime, DirectML), Widgets and Search components,
          about 100 MB the dock never uses. These are the parts it depends on, at the metapackage's versions. -->
-    <PackageReference Include="Microsoft.WindowsAppSDK.Base" Version="2.0.4" />
-    <PackageReference Include="Microsoft.WindowsAppSDK.Foundation" Version="2.3.12" />
-    <PackageReference Include="Microsoft.WindowsAppSDK.InteractiveExperiences" Version="2.1.9" />
-    <PackageReference Include="Microsoft.WindowsAppSDK.WinUI" Version="2.3.9" />
-    <PackageReference Include="Microsoft.WindowsAppSDK.DWrite" Version="2.1.0" />
-    <PackageReference Include="Microsoft.WindowsAppSDK.Runtime" Version="2.5.1" />
+    <PackageReference Include="Microsoft.WindowsAppSDK.Base" Version="2.7.0" />
+    <PackageReference Include="Microsoft.WindowsAppSDK.Foundation" Version="2.7.0" />
+    <PackageReference Include="Microsoft.WindowsAppSDK.InteractiveExperiences" Version="2.7.0" />
+    <PackageReference Include="Microsoft.WindowsAppSDK.WinUI" Version="2.7.0" />
+    <PackageReference Include="Microsoft.WindowsAppSDK.DWrite" Version="2.7.0" />
+    <PackageReference Include="Microsoft.WindowsAppSDK.Runtime" Version="2.7.0" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Velopack" Version="1.2.161" />
